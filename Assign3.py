@@ -1,95 +1,103 @@
+from sqlite3 import dbapi2
 import numpy as np
-import scipy as sp
-import matplotlib.pyplot as plt
-import scipy.io
-import pandas as pn
-from matplotlib import pyplot as plt
-from scipy.cluster.hierarchy import dendrogram
-from sklearn.datasets import load_iris
-from sklearn.cluster import AgglomerativeClustering
 from sklearn.neighbors import NearestNeighbors
+from matplotlib import pyplot as plt
+from numpy import diff
 
-def DBSCAN (data):
-    C = 0
-    clusterArr = [data[0]]
-    indexArr = []
-    for item in range(1, len(data)):
-        p1 = data[item-1]
-        p2 = data[item]
-        print(p1)
-        break
-            
-            
-    return 0
+def regionQuery(data,point,epsilon):
+    N = []
+    for i,x in enumerate(data):
+        if (point[0]-x[0])**2+(point[1]-x[1])**2 < epsilon:
+            N.append(i)
+    return N
+        
+def expandCluster(P,indexList,data,neighbourPts,epsilon,minPts,clusters):
+    c = []
+    c.append(P)
+    indexList[P]=1
+    #neigbourPts3 = []
+    for i in neighbourPts:
+        if indexList[i]:
+            continue
+        else:
+            indexList[i]=1
+            neighbourPts2 = regionQuery(data,data[i],epsilon)
+            if len(neighbourPts2) > minPts:
+                neighbourPts += neighbourPts2
+        flag = 1
+        for j in list(np.concatenate(clusters).flat):
+            if (j==i):
+                flag = 0
+        if flag:
+            c.append(i)
+    return c,indexList
 
 
-# def regionQuery(Data, P, eps)
-
-def main():
-     
- 
-    # Loading the data
-    file = open("Lab-3/data_clustering.csv", 'rb')
-    data = np.loadtxt(file,delimiter = ",")
-    
-    fig = plt.figure()
-    frame = fig.add_subplot(1,1,1)
-    
-    valuess = np.array([3, 4, 5])
+def DBSCAN(data,epsilon,minPts):
+    indexList = np.zeros(len(data))
+    noise = []
+    C = []
+    for item in range(len(data)):
+        if (indexList[item]):
+            continue
+        else:
+            indexList[item]=1
+        neighborPts = regionQuery(data,data[item],epsilon)
+        if (len(neighborPts)< minPts):
+            noise.append(item)
+        else:
+            c,indexList = expandCluster(item,indexList,data,neighborPts,epsilon,minPts)
+            C.append(c)
+    return C
+        
+def knearneigbors(data,valuess):
     neibList = []
     kneibList = []
     distances = []
-    for item in range(lem(valuess)):
-        neibList.append(NearestNeighbors(n_neighbours = valuess[item]))
+    for item in range(len(valuess)):
+        neibList.append(NearestNeighbors(n_neighbors = valuess[item]))
         neibList[item].fit(data)
         kneibList.append(neibList[item].kneighbors(data, return_distance=True)[0])
 
-        distances = []
+        distances.append([])
         for item2 in kneibList[item]:
+            #print(item2)
             distances[item].append(item2[-1])
-        sorted(distances[item])
+        #print(distances[item])
+        distances[item] = sorted(distances[item])
 
-        plt.plot(range(len(distances[item])), distances[item])
+    return distances
 
-        
+
+def derv(y):
+    dy = diff(y)
+    dx = diff(range(len(y)))
+    dydx = dy/dx
+    ddyddx = diff(dydx)/diff(dx)
+    fig = plt.figure()
+    frame = fig.add_subplot(1,1,1)
+    print(ddyddx)
+    frame.plot(diff(dx),ddyddx)   
     plt.show()
-    
 
+def plot_knearneigbors(distances):
+    fig = plt.figure()
+    frame = fig.add_subplot(1,1,1)
     
-    
-    
-    
-    #    def get_clusters(self, data, cluster_threshold=0.05):
-    #     clusterFinal = [] 
-    # if data:   
-    #   clusterArr = [data[0]]
-    #   for item in range(1, len(data)):
-    #         p1 = data[item-1]
-    #         p2 = data[item]
-    #         pointsDis = self.distance(p1, p2)
-    #         if pointsDis <= cluster_threshold:
-    #             clusterArr.append(p2)
-                
-    #         else:
-    #             clusterFinal.append(clusterArr)
-    #             clusterArr = [p2]
+    for item in distances:
+        frame.plot(range(len(item)), item)
 
-    #   if clusterFinal:
-    #         pointsDis = self.distance(clusterFinal[0][0], clusterArr[-1])
-    #         if pointsDis <= cluster_threshold:
-    #           clusterFinal[0] = clusterArr + clusterFinal[0]
-    #         else:
-    #           clusterFinal.append(clusterArr)
-    #   else:
-    #     clusterFinal.append(clusterArr)
-      
-    # return clusterFinal
-    
-    
- 
+    plt.show()
 
+def main():
+    data = np.loadtxt("data_clustering.csv",delimiter = ",")
+    valuess = np.array([3, 4, 5])
+    distances = knearneigbors(data,valuess)
+    derv(distances[0])
+    #plot_knearneigbors(distances)
 
+    #x = DBSCAN(data,)
+    #print(x)
 
 if __name__ == "__main__":
     main()
-
