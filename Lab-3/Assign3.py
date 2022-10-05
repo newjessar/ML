@@ -4,6 +4,8 @@ from sklearn.neighbors import NearestNeighbors
 from matplotlib import pyplot as plt
 from numpy import diff
 
+# look which points are within the neigborhood of a point called point, the distance is euclidian distance
+# this includes the point itself. return all the neigbor points as a list of indexes.
 def regionQuery(data,point,epsilon):
     N = []
     for i,x in enumerate(data):
@@ -12,7 +14,6 @@ def regionQuery(data,point,epsilon):
     return N
 
 def find_elbow(data, theta):
-
     # make rotation matrix
     co = np.cos(theta)
     si = np.sin(theta)
@@ -27,13 +28,17 @@ def find_elbow(data, theta):
 def get_data_radiant(data):
   return np.arctan2(data[:, 1].max() - data[:, 1].min(), 
                     data[:, 0].max() - data[:, 0].min())
-        
+
+# look at one point and look at all the points that are either directly or indirectly connect to that point
+# all these points are either put into the same cluster or they were classified before and then nothing is done
 def expandCluster(P,indexList,data,neighbourPts,epsilon,minPts,clusters):
     c = []
     c.append(P)
     indexList[P]=1
     clusters2 = clusters.copy()
-    #neigbourPts3 = []
+
+    # go through all the neigbour points and look at the neigbors of every neigbor point and add that to all
+    # neigborhood points
     for i in neighbourPts:
         if indexList[i]==0:
             indexList[i]=1
@@ -41,15 +46,21 @@ def expandCluster(P,indexList,data,neighbourPts,epsilon,minPts,clusters):
             if len(neighbourPts2) > minPts:
                 for j in neighbourPts2:
                     neighbourPts.append(j)
+
+        # set a flag for later
         flag = 1
         clus = []
+
+        # make a flat list of all the points that are already classified in a cluster
         for cluster in clusters2:
             if type(cluster) != list:
                 clus.append(cluster)
                 continue
             for j in cluster:
                 clus.append(j)
-        #print(clus)
+
+        # go through the clus list and check if the current point index is already in that list
+        # if so do nothing else append the current point to the cluster list
         for j in clus:
             if (j==i):
                 flag = 0
@@ -58,7 +69,9 @@ def expandCluster(P,indexList,data,neighbourPts,epsilon,minPts,clusters):
             c.append(i)
     return c,indexList
 
-
+# perform the DBSCAN algorithm using the functions regionQuery to determine all the points that are in the neigborhood of a point
+# and expandcluster to determine all the points from the same cluster
+# and also in the process determine which points are noice
 def DBSCAN(data,epsilon,minPts):
     indexList = np.zeros(len(data))
     noise = []
@@ -76,28 +89,29 @@ def DBSCAN(data,epsilon,minPts):
                 c,indexList = expandCluster(item,indexList,data,neighborPts,epsilon,minPts,C)
                 C.append(c)
     return C
-        
+
+# determine the distance from each point to its farthest neigbour as determined from the NearestNeigbors
+# function from sklearn 
 def knearneigbors(data,valuess):
     neibList = []
     kneibList = []
     distances = []
     # go through the list valuess which is a list of all the k neighbours
-    # 
     for item in range(len(valuess)):
         neibList.append(NearestNeighbors(n_neighbors = valuess[item]))
         neibList[item].fit(data)
         kneibList.append(neibList[item].kneighbors(data, return_distance=True)[0])
 
+        # put the distances for each n_neigbor value in a list in side of a list. and sort the list
         distances.append([])
         for item2 in kneibList[item]:
-            #print(item2)
             distances[item].append(item2[-1])
-        #print(distances[item])
         distances[item] = sorted(distances[item])
 
     return distances
 
-
+# we make a plot of the distances we got from the knearneigbours function
+# we plot this for visualisation to help us in understanding if the value for epsilon makes sense
 def plot_knearneigbors(distances,labels):
     fig = plt.figure()
     frame = fig.add_subplot(1,1,1)
@@ -107,6 +121,8 @@ def plot_knearneigbors(distances,labels):
     frame.legend()
     plt.show()
 
+# we try to find the optimal epsilon value for every
+# number of minpoints we use a function for this called find_elbow
 def findEpsilon(distances):
     epsilons = []
     for dis in distances:
