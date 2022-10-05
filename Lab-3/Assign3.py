@@ -1,5 +1,6 @@
 from sqlite3 import dbapi2
 import numpy as np
+from sklearn.metrics import silhouette_score
 from sklearn.neighbors import NearestNeighbors
 from matplotlib import pyplot as plt
 from numpy import diff
@@ -87,10 +88,9 @@ def DBSCAN(data,epsilon,minPts):
             if (len(neighborPts) < minPts):
                 noise.append(item)
             else:
-                print("test")
                 c,indexList = expandCluster(item,indexList,data,neighborPts,epsilon,minPts,C)
                 C.append(c)
-    return C
+    return C,noise
 
 # determine the distance from each point to its farthest neigbour as determined from the NearestNeigbors
 # function from sklearn 
@@ -120,6 +120,9 @@ def plot_knearneigbors(distances,labels):
     
     for item in range(len(distances)):
         frame.plot(range(len(distances[item])), distances[item],label=str(labels[item]))
+
+    frame.set_xlabel("index")
+    frame.set_ylabel("distance")
     frame.legend()
     plt.show()
 
@@ -132,22 +135,81 @@ def findEpsilon(distances):
         for i,x in enumerate(dis):
             elbow.append([i,x])
         elbow = np.array(elbow)
-        #print(elbow)
         index = find_elbow(elbow, get_data_radiant(elbow))
         epsilons.append(dis[index])
     return epsilons
 
+# make plots of the clusters
+def plot_clusters(clusters,data,noise):
+    fig,frames = plt.subplots(1,1,figsize=(10,10))
+
+    # plot the clusters
+    for i in range(len(clusters)):
+        frames.scatter(data[clusters[i],0],data[clusters[i],1])
+    # plot the noise
+    frames.scatter(data[noise,0],data[noise,1],label="noise")
+    frames.legend()
+    frames.set_xlabel("x")
+    frames.set_ylabel("y")
+    frames.set_title("DBSCAN clustering algorithm")
+
+    plt.show()
+
+def silDistance(data,indexes):
+    labels = np.zeros(len(indexes))
+
+    for i in range(len(indexes)):
+        for j in range(len(indexes[i])):
+            labels[indexes[i][j]] = i
+    n_clusters = len(indexes)
+
+    Sx = 0
+    for i,x in enumerate(data):
+        clusters = []
+        for m in range(n_clusters):
+            clusters.append([m,0,0])
+        ax = 0
+        bx = 0
+        dis = 0
+        Ci = 0
+        for j,y in enumerate(data):
+            if i==j:
+                Ci += 1
+                continue
+            if (labels[j]==labels[i]):
+                dis = dis + (x[0]-y[0])**2+(x[1]-y[1])**2
+                Ci += 1
+                continue
+            for k in clusters:
+                if labels[j]== k[0]:
+                    k[1] += (x[0]-y[0])**2+(x[1]-y[1])**2
+                    k[2] += 1
+        bxx = []
+        for l in clusters:
+            if (l[0]==labels[i]):
+                continue
+            bxx.append(l[1]/l[2])
+        bx = min(bxx)
+        ax = dis/Ci
+        Sx += (bx-ax)/max([ax,bx])
+    return Sx/len(data)
+        
+
 def main():
-    data = np.loadtxt("Lab-3/data_clustering.csv",delimiter = ",")
+    data = np.loadtxt("data_clustering.csv",delimiter = ",")
     valuess = np.array([3, 4, 5])
     distances = knearneigbors(data,valuess)
-    #derv(distances[0])
-    plot_knearneigbors(distances,valuess)
+    # plot_knearneigbors(distances,valuess)
 
     epsilons = findEpsilon(distances)
-    print(epsilons)
-    x = DBSCAN(data,epsilons[2],5)
-    print(x)
+
+    for i in range(3):
+        clusters,noise = DBSCAN(data,epsilons[i],i+3)
+        Sx = silhouette_score(data,clusters)
+        print(Sx)
+
+    # plot_clusters(clusters,data,noise)
+    
 
 if __name__ == "__main__":
     main()
