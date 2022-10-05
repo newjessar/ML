@@ -77,11 +77,13 @@ def DBSCAN(data,epsilon,minPts):
     noise = []
     C = []
     for item in range(len(data)):
+        # if the point is already visited do nothing
         if (indexList[item]):
             continue
         else:
             indexList[item]=1
             neighborPts = regionQuery(data,data[item],epsilon)
+            # if there are less neigborhood points than the minimum requirement then classify it as noise.
             if (len(neighborPts) < minPts):
                 noise.append(item)
             else:
