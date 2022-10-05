@@ -1,3 +1,4 @@
+from operator import index
 from sqlite3 import dbapi2
 import numpy as np
 from sklearn.metrics import silhouette_score
@@ -155,16 +156,27 @@ def plot_clusters(clusters,data,noise):
 
     plt.show()
 
-def silDistance(data,indexes):
-    labels = np.zeros(len(indexes))
+# calculate the silhouette scores for the clustering according to indexesold which are just
+# the indexes for the data points clusters
+def silDistance(data,indexesold):
+    # first make a flat list from indexesold so that we can index the data because we do not use the noise
+    indexes = []
+    for i in indexesold:
+        for j in i:
+            indexes.append(j)
+    n_clusters = len(indexesold)
 
-    for i in range(len(indexes)):
-        for j in range(len(indexes[i])):
-            labels[indexes[i][j]] = i
-    n_clusters = len(indexes)
+    # next make a list of labels to label each cluster with a number
+    labels = []
+    q = -1
+    for i in indexesold:
+        q+=1
+        for j in i:
+            labels.append(q)
 
+    # and lastly calculate the silhouette scores by looping through the data
     Sx = 0
-    for i,x in enumerate(data):
+    for i,x in enumerate(data[indexes]):
         clusters = []
         for m in range(n_clusters):
             clusters.append([m,0,0])
@@ -172,7 +184,7 @@ def silDistance(data,indexes):
         bx = 0
         dis = 0
         Ci = 0
-        for j,y in enumerate(data):
+        for j,y in enumerate(data[indexes]):
             if i==j:
                 Ci += 1
                 continue
@@ -192,6 +204,8 @@ def silDistance(data,indexes):
         bx = min(bxx)
         ax = dis/Ci
         Sx += (bx-ax)/max([ax,bx])
+
+    # return the average silhouette score
     return Sx/len(data)
         
 
@@ -199,16 +213,18 @@ def main():
     data = np.loadtxt("data_clustering.csv",delimiter = ",")
     valuess = np.array([3, 4, 5])
     distances = knearneigbors(data,valuess)
-    # plot_knearneigbors(distances,valuess)
+    plot_knearneigbors(distances,valuess)
 
     epsilons = findEpsilon(distances)
-
+    print(epsilons)
+    # calculate the silhouette scores
     for i in range(3):
         clusters,noise = DBSCAN(data,epsilons[i],i+3)
-        Sx = silhouette_score(data,clusters)
+
+        Sx = silDistance(data,clusters)
         print(Sx)
 
-    # plot_clusters(clusters,data,noise)
+    plot_clusters(clusters,data,noise)
     
 
 if __name__ == "__main__":
