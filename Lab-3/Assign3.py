@@ -120,7 +120,7 @@ def findEpsilon(distances):
     return epsilons
 
 def main():
-    data = np.loadtxt("data_clustering.csv",delimiter = ",")
+    data = np.loadtxt("Lab-3/data_clustering.csv",delimiter = ",")
     valuess = np.array([3, 4, 5])
     distances = knearneigbors(data,valuess)
     #derv(distances[0])
