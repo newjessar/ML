@@ -73,7 +73,7 @@ def initialize_random_single(data, prototypes):
 """
 perform the learning algorithm for every epoch
 """
-def epoch(data,prototypes,nu,measure):
+def epoch(data,prototypes,eta,measure):
     shuffledata = data.copy()
     # shuffle the data
     random.shuffle(shuffledata)
@@ -88,7 +88,7 @@ def epoch(data,prototypes,nu,measure):
         # move the prototype closer to the data point
         for index in range(len(prototypes[indexPrototype].feature_vector)):
             prototypes[indexPrototype].feature_vector[index] += \
-                same*nu*(shuffledata[indexData].\
+                same*eta*(shuffledata[indexData].\
                 feature_vector[index]-prototypes[indexPrototype].feature_vector[index])
     return prototypes
 
@@ -135,6 +135,10 @@ def label_data(data,K,n_class):
         newData.append(LabelPoint(x,i//(len(data)/n_class)))
     return prototypes,newData
 
+"""
+This function calculated the training error by looking if the classification based on the prototypes matches the actual
+label of the data. The training 
+"""
 def calc_training_error(data,prototypes,measure):
     E = 0
     for dataPoint in data:
@@ -143,6 +147,9 @@ def calc_training_error(data,prototypes,measure):
             E +=1
     return E
 
+"""
+This function plots the training error over a range of epochs by just taking the indexes of the list of training errors
+"""
 def plot_training_error(E):
     E = np.array(E)
     E = E/100
@@ -157,7 +164,7 @@ def plot_training_error(E):
 """
 Perform the full algorithm and make plots
 """
-def VQlearning(data,K,tmax,nu,n_class=2,measure="euclid"):
+def VQlearning(data,K,tmax,eta,n_class=2,measure="euclid"):
     prototypes,labelData = label_data(data,K,n_class)
     prototypes = initialize_random_single(labelData,prototypes)
     t=1
@@ -173,9 +180,28 @@ def VQlearning(data,K,tmax,nu,n_class=2,measure="euclid"):
     # perform the learning algorithm for one epoch until t is higher than tmax
     while t<=tmax:
         # perform the learning
-        prototypes = epoch(labelData,prototypes,nu,measure)
+        prototypes = epoch(labelData,prototypes,eta,measure)
+        # calculate the training error
         E = calc_training_error(labelData,prototypes,measure)
         trainE.append(E)
+
+        # check if the training error is constant if so stop running early
+        if (len(trainE)>50):
+            flag = True
+            for i in range(50):
+                if abs(trainE[t-1]-trainE[t-i-1]) > 0:
+                    flag = False
+            if flag:
+                # add one more last trace for the prototype positions
+                trace.append([])
+                for i in range(len(prototypes)):
+                    feat = []
+                    for j in range(len(prototypes[i].feature_vector)):
+                        feat.append(prototypes[i].feature_vector[j])
+                    prototypecopy = LabelPoint(feat,prototypes[i].label)
+                    trace[-1].append(prototypecopy)
+                break
+
         # at certain moments save the location of the prototypes
         if (t%(tmax//5)==0):
             trace.append([])
@@ -193,8 +219,6 @@ def VQlearning(data,K,tmax,nu,n_class=2,measure="euclid"):
 
 def main():
     data = np.loadtxt("lvqdata.csv",delimiter = ",")
-    nu = [0.1,0.4,0.7]
-    K = [2,4]
     prototypes = VQlearning(data,1,400,0.002)
     
 main()
