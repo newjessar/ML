@@ -15,45 +15,62 @@ def distanceMeasure(prototypes,dataPoint,measure):
     distances = np.zeros(len(prototypes))
     prototypes = np.array(prototypes)
     dataPoint = np.array(dataPoint)
+    #print("datapoint: ", dataPoint)
     if measure=="euclid":
         for index,prototype in enumerate(prototypes):
-            distances[index]+=np.linalg.norm(prototype-dataPoint,ord=2)
+            print(prototype.feature_vector)
+            distances[index]+=np.linalg.norm(prototype.feature_vector-dataPoint.feature_vector,ord=2)
     elif measure=="manhattan":
         for index,prototype in enumerate(prototypes):
-            distances[index]+=np.linalg.norm(prototype-dataPoint,ord=1)
+            distances[index]+=np.linalg.norm(prototype.feature_vector-dataPoint.feature_vector,ord=1)
     return np.where(distances==np.min(distances))[0][0]
 
 """
 Initialize a set of random prototypes based on the average feature values of the data
 """     
-def initialize_random(datas,K):
+def initialize_random_partition(datas,K,prototypes):
     data = datas.copy()
     # shuffle the data randomly and put them into groups
     random.shuffle(data)
     newData = [data[i::K] for i in range(K)]
-    # set prototypes at 0 value
-    prototypes = [[0 for j in range(len(data[0]))] for i in range(K)]
     # go through the data
     for index1 in range(len(newData)):
-        for index2 in range(len(newData[index1])):
-            for index3 in range(len(newData[index1][index2])):
+        for index2 in range(len(newData[index1].feature_vector)):
+            label = newData[index1][index2].label
+            for index3 in range(len(newData[index1][index2].feature_vector)):
                 # sum the values for the features of the data
-                prototypes[index1][index3] += newData[index1][index2][index3]
+                prototypes[index1].feature_vector[index3] += newData[index1][index2].feature_vector[index3]
 
     # divide the feature values of the prototypes by the amount of data points for which the features were summed
     # so that we have the average instead of the total amount
     for index in range(len(prototypes)):
         for coord in range(len(prototypes[index])):
-            prototypes[index][coord] =  prototypes[index][coord] / len(data)
+            prototypes[index].feature_vector[coord] =  prototypes[index].feature_vector[coord] / len(data)
     return prototypes
 
+def sameVector(prototype,point):
+    for feature in range(len(point)):
+        if (point[feature]!=prototype[feature]):
+            return False
+    return True
 
-"""
-Make a stupid initialization for the VQ algorithm instead of random
-"""
-def stupid_init(data,K):
-    prototypes = [[20 for j in range(len(data[0]))] for i in range(K)]
-    return prototypes
+def used(point,prototypes):
+    for prototype in prototypes:
+        if sameVector(prototype.feature_vector,point.feature_vector):
+            return True
+    return False
+
+def initialize_random_single(data, prototypes):
+    newData = data.copy()
+    random.shuffle(newData)
+    for prototype in prototypes:
+        for point in newData:
+            if point.label==prototype.label and not used(point,prototypes):
+                for index,feature in enumerate(point.feature_vector):
+                    prototype.feature_vector[index] = feature.copy()
+    return prototypes                       
+        
+    
 """
 perform the learning algorithm for every epoch
 """
@@ -65,20 +82,15 @@ def epoch(data,prototypes,nu,measure):
     for indexData in range(len(shuffledata)):
         # find the closest prototype to the data point
         indexPrototype = distanceMeasure(prototypes,shuffledata[indexData],measure)
+        if (prototypes[indexPrototype].label==shuffledata[indexData].label):
+            same = 1
+        else:
+            same = -1
         # move the prototype closer to the data point
-        for index in range(len(prototypes[indexPrototype])):
-            prototypes[indexPrototype][index] += nu*(shuffledata[indexData][index]-prototypes[indexPrototype][index])
+        for index in range(len(prototypes[indexPrototype].feature_vector)):
+            prototypes[indexPrototype].feature_vector[index] += \
+                same*nu*(shuffledata[indexData].feature_vector[index]-prototypes[indexPrototype].feature_vector[index])
     return prototypes
-
-"""
-Plot the data and prototypes at a certain epoch
-"""
-def plot_epoch(data,prototypes):
-    fig,frame = plt.subplots(1,1)
-    prototypes = np.array(prototypes)
-    frame.scatter(data[::,0],data[::,1])
-    frame.scatter(prototypes[:,0],prototypes[:,1])
-    plt.show()
 
 """
 Make a plot of the data and the prototypes but plot the prototypes at different times t with different colors to show
@@ -89,101 +101,60 @@ def plot_trace(trace,data):
     fig,frame = plt.subplots(1,1)
     frame.scatter(data[::,0],data[::,1],s=5)
     for i,prototypes in enumerate(trace):
-        frame.scatter(prototypes[:,0],prototypes[:,1],label="step "+str(i+1),s=50)
+        prototypes_features = np.array([prototype.feature_vector for prototype in prototypes])
+        frame.scatter(prototypes_features[:,0],prototypes_features[:,1],label="step "+str(i+1),s=50)
     frame.set_xlabel("x")
     frame.set_ylabel("y")
     frame.legend()
     plt.show()
 
-"""
-Make a plot for the quantization error
-"""
-def plot_HQ(HQ):
-    fig,frame = plt.subplots(1,1)
-    frame.plot(range(len(HQ)),HQ)
-    frame.set_title("HQ")
-    frame.set_xlabel("time t (epochs)")
-    frame.set_ylabel("quantization error")
-    plt.show()
 
 """
-Make multiple plots for the quantization error for multiple runs of the learning rate nu and number 
-of prototypes K
+first put the labels on all data
 """
-def multi_plot_HQ(HQ,nus,Ks):
-    fig,frames = plt.subplots(len(nus),len(Ks),figsize=(8,8))
-    for i in range(len(nus)):
-        for j in range(len(Ks)):
-            index = i*len(Ks)+j
-            print(index)
-            frames[i,j].plot(range(len(HQ[index])),HQ[index])
-            frames[i,j].set_title("nu: "+str(nus[i])+" K: "+str(Ks[j]))
-            frames[i,j].set_xlabel("time t (epochs)")
-            frames[i,j].set_ylabel("quantization error")
-    fig.tight_layout()
-    plt.show()
-    
-"""
-evaluates what the quantization error is of the prototypes wrt the data
-"""
-def evaluate_HQerror(data,prototypes,measure):
-    HQ = 0
-    # go through the data
-    for point in data:
-        # find the closest prototype to a data point called point
-        indexPrototype = distanceMeasure(prototypes,point,measure)
-        # calculate the squared distance from the prototype to the data point
-        if measure=="euclid":
-            HQ += np.linalg.norm(point-prototypes[indexPrototype],ord=2)**2
-        elif measure=="manhattan":
-            HQ += np.linalg.norm(point-prototypes[indexPrototype],ord=2)**2
-    return HQ
+def label_data(data,K,n_class):
+    dim = len(data[0])
+    prototypes = []
+    for i in range(n_class):
+        for j in range(K):
+            features = [0 for k in range(dim)]
+            prototypes.append(LabelPoint(features,i))
+    newData = []
+    for i,x in enumerate(data):
+        newData.append(LabelPoint(x,i//(len(data)/n_class)))
+    return prototypes,newData
 
 """
 Perform the full algorithm and make plots
 """
-def VQlearning(data,K,tmax,nu,measure="euclid"):
-    prototypes = initialize_random(data,K)
-    HQlist = []
+def VQlearning(data,K,tmax,nu,n_class=2,measure="euclid"):
+    prototypes,labelData = label_data(data,K,n_class)
+    prototypes = initialize_random_single(labelData,prototypes)
     t=1
     trace = []
     trace.append([])
     for i in range(len(prototypes)):
-        trace[-1].append([])
-        for j in prototypes[i]:
-            trace[-1][i].append(j)
+        trace[-1].append(prototypes[i].feature_vector.copy())
     # perform the learning algorithm for one epoch until t is higher than tmax
     while t<=tmax:
         # perform the learning
-        prototypes = epoch(data,prototypes,nu,measure)
-        # evaluate the quantization error
-        HQ = evaluate_HQerror(data,prototypes,measure)
-        HQlist.append(HQ)
+        prototypes = epoch(labelData,prototypes,nu,measure)
         # at certain moments save the location of the prototypes
         if (t%20 ==0):
             trace.append([])
             for i in range(len(prototypes)):
-                trace[-1].append([])
-                for j in prototypes[i]:
-                    trace[-1][i].append(j)
-            # plot_epoch(data,prototypes)
+                trace[-1].append(prototypes[i].feature_vector.copy())
         t += 1
     # plot the trace and the quantization error in seperate plots
-    #plot_trace(trace,data)
+    plot_trace(trace,data)
     #plot_HQ(HQlist)
-    return prototypes,HQlist
+    return prototypes
 
 def main():
-    data = np.loadtxt("simplevqdata.csv",delimiter = ",")
+    data = np.loadtxt("lvqdata.csv",delimiter = ",")
     nu = [0.1,0.4,0.7]
     K = [2,4]
-    prototypes,HQlist = VQlearning(data,4,100,0.05)
-    moreHQlist = []
-    for i in nu:
-        for j in K:
-            prototypes,HQlist = VQlearning(data,j,100,i)
-            moreHQlist.append(HQlist)
-    multi_plot_HQ(moreHQlist,nu,K)
+    prototypes = VQlearning(data,4,100,0.05)
 main()
     
     
