@@ -14,11 +14,10 @@ the default distance measure is euclidian distance"""
 def distanceMeasure(prototypes,dataPoint,measure):
     distances = np.zeros(len(prototypes))
     prototypes = np.array(prototypes)
-    dataPoint = np.array(dataPoint)
     #print("datapoint: ", dataPoint)
     if measure=="euclid":
         for index,prototype in enumerate(prototypes):
-            print(prototype.feature_vector)
+            #print(prototype.feature_vector)
             distances[index]+=np.linalg.norm(prototype.feature_vector-dataPoint.feature_vector,ord=2)
     elif measure=="manhattan":
         for index,prototype in enumerate(prototypes):
@@ -89,20 +88,32 @@ def epoch(data,prototypes,nu,measure):
         # move the prototype closer to the data point
         for index in range(len(prototypes[indexPrototype].feature_vector)):
             prototypes[indexPrototype].feature_vector[index] += \
-                same*nu*(shuffledata[indexData].feature_vector[index]-prototypes[indexPrototype].feature_vector[index])
+                same*nu*(shuffledata[indexData].\
+                feature_vector[index]-prototypes[indexPrototype].feature_vector[index])
     return prototypes
 
 """
-Make a plot of the data and the prototypes but plot the prototypes at different times t with different colors to show
+Make a plot of the data and the prototypes but plot the prototypes at different 
+times t with different colors to show
 how they moved during the learning process
 """
-def plot_trace(trace,data):
-    trace = np.array(trace)
+def plot_trace(trace,data,n_class):
     fig,frame = plt.subplots(1,1)
-    frame.scatter(data[::,0],data[::,1],s=5)
+    marking = ["o","s"]
+    color = ["red","green","blue","yellow","pink","black"]
+    print(data)
+    for i in range(n_class):
+        frame.scatter(data[50*i:50*(i+1):,0],\
+        data[50*i:50*(i+1):,1],s=5,marker=marking[i])
     for i,prototypes in enumerate(trace):
-        prototypes_features = np.array([prototype.feature_vector for prototype in prototypes])
-        frame.scatter(prototypes_features[:,0],prototypes_features[:,1],label="step "+str(i+1),s=50)
+        clusters = [[] for i in range(n_class)]
+        for prototypeIndex in range(len(prototypes)):
+            clusters[prototypes[prototypeIndex].label].\
+            append(prototypes[prototypeIndex].feature_vector)
+        clusters = np.array(clusters)
+        for j in range(n_class):
+            frame.scatter(clusters[j][:,0],clusters[j][:,1],marker=marking[j],\
+            label="step "+str(i+1) + " cat "+ str(j),s=50,c=color[i])
     frame.set_xlabel("x")
     frame.set_ylabel("y")
     frame.legend()
@@ -124,6 +135,25 @@ def label_data(data,K,n_class):
         newData.append(LabelPoint(x,i//(len(data)/n_class)))
     return prototypes,newData
 
+def calc_training_error(data,prototypes,measure):
+    E = 0
+    for dataPoint in data:
+        indexPrototype = distanceMeasure(prototypes,dataPoint,measure)
+        if (dataPoint.label!= prototypes[indexPrototype].label):
+            E +=1
+    return E
+
+def plot_training_error(E):
+    E = np.array(E)
+    E = E/100
+    fig,frame = plt.subplots(1,1)
+    frame.plot(range(len(E)),E)
+    frame.set_xlabel("epoch")
+    frame.set_ylabel("Training error")
+    plt.show()
+
+
+
 """
 Perform the full algorithm and make plots
 """
@@ -131,30 +161,42 @@ def VQlearning(data,K,tmax,nu,n_class=2,measure="euclid"):
     prototypes,labelData = label_data(data,K,n_class)
     prototypes = initialize_random_single(labelData,prototypes)
     t=1
+    trainE = []
     trace = []
     trace.append([])
     for i in range(len(prototypes)):
-        trace[-1].append(prototypes[i].feature_vector.copy())
+        feat = []
+        for j in range(len(prototypes[i].feature_vector)):
+            feat.append(prototypes[i].feature_vector[j])
+        prototypecopy = LabelPoint(feat,prototypes[i].label)
+        trace[-1].append(prototypecopy)
     # perform the learning algorithm for one epoch until t is higher than tmax
     while t<=tmax:
         # perform the learning
         prototypes = epoch(labelData,prototypes,nu,measure)
+        E = calc_training_error(labelData,prototypes,measure)
+        trainE.append(E)
         # at certain moments save the location of the prototypes
-        if (t%20 ==0):
+        if (t%(tmax//5)==0):
             trace.append([])
             for i in range(len(prototypes)):
-                trace[-1].append(prototypes[i].feature_vector.copy())
+                feat = []
+                for j in range(len(prototypes[i].feature_vector)):
+                    feat.append(prototypes[i].feature_vector[j])
+                prototypecopy = LabelPoint(feat,prototypes[i].label)
+                trace[-1].append(prototypecopy)
         t += 1
-    # plot the trace and the quantization error in seperate plots
-    plot_trace(trace,data)
-    #plot_HQ(HQlist)
+    # plot the trace and the classification error in seperate plots
+    plot_training_error(trainE)
+    plot_trace(trace,data,n_class)
     return prototypes
 
 def main():
     data = np.loadtxt("lvqdata.csv",delimiter = ",")
     nu = [0.1,0.4,0.7]
     K = [2,4]
-    prototypes = VQlearning(data,4,100,0.05)
+    prototypes = VQlearning(data,1,400,0.002)
+    
 main()
     
     
