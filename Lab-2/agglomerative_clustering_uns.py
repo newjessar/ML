@@ -55,8 +55,8 @@ def plotClusters(data,linkage,n_clusters,titles,show=True):
     return labels
 
 # This function computes the average silhouette score for a given clustering method
-# the data, labels and number of clusters need ot be given
-def silDistance(data,labels,n_clusters):
+# the data, labels and number of clusters need to be given
+def silDistance(data, labels, n_clusters):
     Sx = 0
     for i,x in enumerate(data):
         clusters = []
@@ -112,7 +112,7 @@ def main():
     print(SxL)
     linkage = linkage[3]
     lines = lines[linkage]
-    plotDendo(data,linkage,lines,onePlot=True)
+    plotDendo(data,linkage,  lines, onePlot=True)
     
 if __name__ == "__main__":
     main()
