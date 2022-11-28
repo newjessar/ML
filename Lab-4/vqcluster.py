@@ -169,7 +169,7 @@ def VQlearning(data,K,tmax,nu,measure="euclid"):
     return prototypes,HQlist
 
 def main():
-    data = np.loadtxt("simplevqdata.csv",delimiter = ",")
+    data = np.loadtxt("/Users/newjessar/Documents/GitHub/ML-RUG/Lab-4/simplevqdata.csv",delimiter = ",")
     nu = [0.1,0.4,0.7]
     K = [2,4]
     prototypes,HQlist = VQlearning(data,4,100,0.05)

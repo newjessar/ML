@@ -210,7 +210,7 @@ def silDistance(data,indexesold):
         
 
 def main():
-    data = np.loadtxt("/Users/newjessar/Documents/GitHub/ML-RUG/Lab-2/data_clustering.csv",delimiter = ",")
+    data = np.loadtxt("/Users/newjessar/Documents/GitHub/ML-RUG/Lab-3/data_clustering.csv",delimiter = ",")
     valuess = np.array([3, 4, 5])
     distances = knearneigbors(data, valuess)
     plot_knearneigbors(distances, valuess)
