@@ -105,7 +105,7 @@ def knearneigbors(data,valuess):
         neibList[item].fit(data)
         kneibList.append(neibList[item].kneighbors(data, return_distance=True)[0])
 
-        # put the distances for each n_neigbor value in a list in side of a list. and sort the list
+        # put the distances for each n_neigbor value in a list inside of a list. and sort the list
         distances.append([])
         for item2 in kneibList[item]:
             distances[item].append(item2[-1])
@@ -210,21 +210,21 @@ def silDistance(data,indexesold):
         
 
 def main():
-    data = np.loadtxt("data_clustering.csv",delimiter = ",")
+    data = np.loadtxt("/Users/newjessar/Documents/GitHub/ML-RUG/Lab-2/data_clustering.csv",delimiter = ",")
     valuess = np.array([3, 4, 5])
-    distances = knearneigbors(data,valuess)
-    plot_knearneigbors(distances,valuess)
+    distances = knearneigbors(data, valuess)
+    plot_knearneigbors(distances, valuess)
 
     epsilons = findEpsilon(distances)
     print(epsilons)
     # calculate the silhouette scores
     for i in range(3):
-        clusters,noise = DBSCAN(data,epsilons[i],i+3)
+        clusters,noise = DBSCAN(data, epsilons[i], i+3)
 
-        Sx = silDistance(data,clusters)
+        Sx = silDistance(data, clusters)
         print(Sx)
 
-    plot_clusters(clusters,data,noise)
+    plot_clusters(clusters, data, noise)
     
 
 if __name__ == "__main__":
