@@ -218,7 +218,7 @@ def VQlearning(data,K,tmax,eta,n_class=2,measure="euclid"):
     return prototypes
 
 def main():
-    data = np.loadtxt("lvqdata.csv",delimiter = ",")
+    data = np.loadtxt("/Users/newjessar/Documents/GitHub/ML-RUG/Lab-5/lvqdata.csv",delimiter = ",")
     prototypes = VQlearning(data,1,400,0.002)
     
 main()
