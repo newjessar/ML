@@ -114,7 +114,7 @@ def knearneigbors(data,valuess):
     return distances
 
 # we make a plot of the distances we got from the knearneigbours function
-# we plot this for visualisation to help us in understanding if the value for epsilon makes sense
+# we plot this for visualization to help us in understanding if the value for epsilon makes sense
 def plot_knearneigbors(distances,labels):
     fig = plt.figure()
     frame = fig.add_subplot(1,1,1)
@@ -210,19 +210,19 @@ def silDistance(data,indexesold):
         
 
 def main():
-    data = np.loadtxt("/Users/newjessar/Documents/GitHub/ML-RUG/Lab-3/data_clustering.csv",delimiter = ",")
-    valuess = np.array([3, 4, 5])
+    data = np.loadtxt("/Users/newjessar/Documents/University/P4/Robotic-2/scripts/ML-RUG/Lab-3/data_clustering.csv",delimiter = ",")
+    valuess = np.array([3, 4, 6])
     distances = knearneigbors(data, valuess)
     plot_knearneigbors(distances, valuess)
 
     epsilons = findEpsilon(distances)
-    print(epsilons)
+    print("eps: ", epsilons)
     # calculate the silhouette scores
     for i in range(3):
         clusters,noise = DBSCAN(data, epsilons[i], i+3)
 
         Sx = silDistance(data, clusters)
-        print(Sx)
+        print("Sihl: ", Sx)
 
     plot_clusters(clusters, data, noise)
     
